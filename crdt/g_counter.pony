@@ -8,7 +8,7 @@ class ref GCounter[A: (Integer[A] val & Unsigned) = U64]
 
   It is limited by the maximum value of the used unsigned integer datatype.
   Any operation that would lead to an overflow (if the maximum is the
-  maximum vlaue for the used unsigned integer type) will result in the value
+  maximum value for the used unsigned integer type) will result in the value
   being set to the maximum. So once the maximum is reached, the GCounter will
   never change.
 
@@ -72,16 +72,8 @@ class ref GCounter[A: (Integer[A] val & Unsigned) = U64]
     Return the current value of the counter (the sum of all replica values).
     """
     var sum = A(0)
-    for v in _data.values() do sum = _sum(sum, v) end
+    for v in _data.values() do sum = _Math.saturated_sum[A](sum, v) end
     sum
-
-  fun _sum(x: A, y: A): A =>
-    (let sum: A, let overflow: Bool) = x.addc(y)
-    if overflow then
-      A.max_value()
-    else
-      sum
-    end
 
   fun ref _data_update(id': ID, value': A) => _data(id') = value'
 
@@ -94,7 +86,7 @@ class ref GCounter[A: (Integer[A] val & Unsigned) = U64]
     Accepts and returns a convergent delta-state.
     """
     try
-      let v' = _data.upsert(_id, value', this~_sum())?
+      let v' = _data.upsert(_id, value', {(x, y) => _Math.saturated_sum[A](x, y) })?
       _checklist_write()
       delta'._data_update(_id, v')
     end
